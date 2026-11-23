@@ -23,10 +23,11 @@ Python/PIL (`build_image.py`, included here) from the verified news of the day:
 
 ## How the program works
 
-`main.py` (Python 3.13, standard library only) decodes the image stored as
-base64 text in `entry.b64` and writes it to `/output/entry.png`
+`main.py` (Python 3.13, standard library only) copies the image stored as
+`entry.png` in this repo and writes it to `/output/entry.png`
 (`MAKEFUN_OUTPUT_DIR` outside the grader). No network, no timestamps, no
-randomness — two runs write byte-identical output.
+randomness — two runs write byte-identical output. The image was drawn with
+Python/PIL by `build_image.py`, included here for provenance.
 
 ```sh
 mkdir -p out && MAKEFUN_OUTPUT_DIR=out python3 main.py
