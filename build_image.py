@@ -2,9 +2,16 @@
 """Build the news-image-20261123 front page deterministically with PIL.
 1024x1024, newspaper front-page style. All text from the verified list
 supplied in the task; no invented dates, numbers or quotes.
+
+v2: photorealistic summit-hall photo leads the COP31 panel (replacing the
+cartoon globe); the story grid grows to 8 stories (BepiColombo and the
+Thanksgiving air-traffic story promoted from ALSO TODAY).
 """
 import textwrap
+from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
+
+HERE = Path(__file__).resolve().parent
 
 W = H = 1024
 PAPER = (247, 243, 234)
@@ -75,24 +82,30 @@ y = draw_wrapped(d, lead_x, y,
     "Nearly 200 countries fail to agree a climate declaration as COP31 ends in chaos. UN chief: \u2018no ambiguity in the science\u2019.",
     font(SANS, 23), lead_w, leading=1.3)
 
-# Lead graphic panel (right)
+# Lead graphic panel (right): photorealistic summit-hall photo on top,
+# caption text kept exactly as v1 in the navy strip below it.
 gx, gy, gw, gh = 668, 162, 320, 268
 d.rectangle([(gx, gy), (gx + gw, gy + gh)], fill=NAVY)
-# globe
-cx, cy, r = gx + 160, gy + 92, 68
-d.ellipse([(cx - r, cy - r), (cx + r, cy + r)], fill=(64, 130, 190), outline=(255, 255, 255), width=3)
-d.ellipse([(cx - 52, cy - 48), (cx + 8, cy + 2)], fill=(74, 160, 90))
-d.ellipse([(cx - 6, cy + 18), (cx + 58, cy + 62)], fill=(74, 160, 90))
-# crack across globe
-d.line([(cx - 70, cy - 60), (cx - 30, cy - 10), (cx - 52, cy + 28), (cx - 8, cy + 66), (cx + 18, cy + 30)],
-       fill=(255, 90, 60), width=6)
+photo = Image.open(HERE / "cop31-photo.webp").convert("RGB")
+pw, ph = photo.size
+target = 320 / 168  # photo region aspect
+if pw / ph > target:
+    nw = int(ph * target)
+    x0 = (pw - nw) // 2
+    photo = photo.crop((x0, 0, x0 + nw, ph))
+else:
+    nh = int(pw / target)
+    y0 = (ph - nh) // 2
+    photo = photo.crop((0, y0, pw, y0 + nh))
+photo = photo.resize((320, 168), Image.LANCZOS)
+img.paste(photo, (gx, gy))
 d.text((gx + 16, gy + gh - 38), "COP31  •  NO DEAL", font=font(SANS_B, 24), fill=(255, 255, 255))
 d.text((gx + 16, gy + 178), "Nearly 200 nations,", font=font(SANS, 20), fill=(210, 220, 235))
 d.text((gx + 16, gy + 202), "no agreement.", font=font(SANS, 20), fill=(210, 220, 235))
 
 d.line([(M, 452), (X1, 452)], fill=INK, width=2)
 
-# ---- Grid: 6 stories, 2 cols x 3 rows ----
+# ---- Grid: 8 stories, 2 cols x 4 rows ----
 stories = [
     ("US", BLUE, "Democrats clinch historic\nUS House majority",
      "At least 258 seats \u2014 the largest Democratic majority since 1992."),
@@ -106,30 +119,32 @@ stories = [
      "Chapo Isidro arrested in a major operation in Mexico."),
     ("INDONESIA", AMBER, "Factory fire kills 3;\n36 missing",
      "Rescuers search for dozens missing after the blaze in Indonesia."),
+    ("SPACE", (96, 64, 138), "BepiColombo\nreaches Mercury",
+     "BepiColombo spacecraft reaches Mercury."),
+    ("US", BLUE, "US rushes to shield\nair traffic",
+     "US rushes to shield air traffic before Thanksgiving."),
 ]
 gx0, gy0 = M, 472
-cell_w, cell_h = 466, 138
-col_gap, row_gap = 20, 12
+cell_w, cell_h = 466, 112
+col_gap, row_gap = 20, 9
 for i, (tag, colour, head, summ) in enumerate(stories):
     cx0 = gx0 + (i % 2) * (cell_w + col_gap)
     cy0 = gy0 + (i // 2) * (cell_h + row_gap)
     d.rectangle([(cx0, cy0), (cx0 + cell_w, cy0 + cell_h)], outline=(180, 174, 162), width=1)
-    tag_w = int(d.textlength(tag, font=font(SANS_B, 18))) + 18
-    d.rectangle([(cx0, cy0), (cx0 + tag_w, cy0 + 28)], fill=colour)
-    d.text((cx0 + 8, cy0 + 4), tag, font=font(SANS_B, 18), fill=(255, 255, 255))
-    ty = cy0 + 36
-    ty = draw_wrapped(d, cx0 + 12, ty, head, font(SERIF_B, 25), cell_w - 24, leading=1.08)
-    draw_wrapped(d, cx0 + 12, ty + 2, summ, font(SANS, 19), cell_w - 24, fill=GREY, leading=1.22)
+    tag_w = int(d.textlength(tag, font=font(SANS_B, 16))) + 16
+    d.rectangle([(cx0, cy0), (cx0 + tag_w, cy0 + 24)], fill=colour)
+    d.text((cx0 + 8, cy0 + 3), tag, font=font(SANS_B, 16), fill=(255, 255, 255))
+    ty = cy0 + 29
+    ty = draw_wrapped(d, cx0 + 12, ty, head, font(SERIF_B, 21), cell_w - 24, leading=1.06)
+    draw_wrapped(d, cx0 + 12, ty + 2, summ, font(SANS, 15), cell_w - 24, fill=GREY, leading=1.18)
 
 # ---- Footer: also today ----
-fy = 472 + 3 * cell_h + 2 * row_gap + 14
+fy = 472 + 4 * cell_h + 3 * row_gap + 10
 d.line([(M, fy), (X1, fy)], fill=INK, width=2)
 d.text((M, fy + 10), "ALSO TODAY", font=font(SANS_B, 20), fill=RED)
 items = [
     "S. Korea education chief quits in AI cheating scandal.",
     "Trump backs Jensen Huang\u2019s Nvidia rehire.",
-    "US rushes to shield air traffic before Thanksgiving.",
-    "BepiColombo spacecraft reaches Mercury.",
 ]
 iy = fy + 42
 for j, it in enumerate(items):
@@ -137,5 +152,5 @@ for j, it in enumerate(items):
     iy2 = iy + (j // 2) * 30
     d.text((ix, iy2), "\u2022  " + it, font=font(SANS, 17), fill=INK)
 
-img.save("/home/hatch/workspace/makefun-news-image/work/entry.png", "PNG", optimize=True)
+img.save(HERE / "entry.png", "PNG", optimize=True)
 print("saved")
